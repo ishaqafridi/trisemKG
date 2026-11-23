@@ -1,0 +1,39 @@
+# TriSemKG pipeline configuration. Paths are relative to the repository root.
+project: TriSemKG
+schema: schema/trisemkg_schema.yaml
+mappings_dir: mappings
+output_dir: output
+
+# ---------------- Layer 1: data sources ----------------
+sources:
+  # Knowledge backbone (curated seed). Enable the PrimeKG and OBO entries after `trisemkg download`.
+  - {adapter: seed_knowledge, path: data/seed}
+  - {adapter: primekg, path: data/external/kg.csv, enabled: false}
+  - {adapter: obo, path: data/external/mondo.obo, node_type: disease, enabled: false}
+  - {adapter: obo, path: data/external/hp.obo, node_type: effect/phenotype, enabled: false}
+  # EHR / EMR
+  - {adapter: fhir, path: data/raw/ehr/fhir}
+  - {adapter: omop, path: data/raw/ehr/omop}
+  # Multimedia objects
+  - {adapter: dicom, path: data/raw/multimedia/dicom}
+  - {adapter: media_manifest, path: data/raw/multimedia/media_manifest.csv}
+  # Multi-omics
+  - {adapter: sample_sheet, path: data/raw/omics/sample_sheet.tsv}
+  - {adapter: vcf, path: data/raw/omics/somatic_variants.vcf}
+  - {adapter: expression, path: data/raw/omics/rnaseq_tpm.tsv, id_system: ENSEMBL, z_threshold: 1.0}
+  - {adapter: proteomics, path: data/raw/omics/proteomics_log2.tsv, id_system: UniProtKB, z_threshold: 1.0}
+  - {adapter: methylation, path: data/raw/omics/methylation_beta.tsv, id_system: HGNC.SYMBOL, beta_threshold: 0.6}
+
+# ---------------- Layer 2: semantic integration ----------------
+semantic:
+  min_confidence: 0.5          # mappings below this are kept but flagged
+  icd_hierarchical_fallback: true
+  lexical_matching: true
+  phenotype_rules: configs/phenotype_rules.yaml
+
+# ---------------- Layer 3: knowledge graph ----------------
+knowledge:
+  exports: [primekg, neo4j, rdf, graphml]
+  primekg_bidirectional: true  # write both directions per edge, as PrimeKG's kg.csv does
+  rdf_provenance: true         # reified statements with prov:wasDerivedFrom and confidence
+  extract_media_features: true
